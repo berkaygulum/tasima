@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Taşınma Envanteri – Gülüm Ailesi</title>
+
+<script type="module">
+  import { initializeApp }   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getDatabase, ref, onValue, set, remove, push, update }
+    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey:            "AIzaSyBFRzXTDsJUYsWVKbNPcohfNEh2-17be-o",
+    authDomain:        "gulumtasinma.firebaseapp.com",
+    databaseURL:       "https://gulumtasinma-default-rtdb.firebaseio.com",
+    projectId:         "gulumtasinma",
+    storageBucket:     "gulumtasinma.firebasestorage.app",
+    messagingSenderId: "1033303668975",
+    appId:             "1:1033303668975:web:6437b49f0057677184c31a"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db  = getDatabase(app);
+
+  // ── Realtime listeners ──────────────────────────────────────────────────
+  onValue(ref(db, 'envanter'), (snapshot) => {
+    const d = snapshot.val() || {};
+    window._data      = d.items || {};
+    window._note      = d.note  || '';
+    window._dataReady = true;
+    window.dispatchEvent(new Event('fb-data'));
+  });
+
+  // ── Write helpers (exposed to global) ──────────────────────────────────
+  window._fbPush = (path, val) =>
+    push(ref(db, path), val).then(r => r.key);
+
+  window._fbSet = (path, val) =>
+    set(ref(db, path), val);
+
+  window._fbRemove = (path) =>
+    remove(ref(db, path));
+
+  window._fbUpdate = (path, val) =>
+    update(ref(db, path), val);
+</script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<style>
+:root {
+  --bg:      #0f0f13;
+  --surface: #18181f;
+  --surface2:#22222c;
+  --border:  #2e2e3a;
+  --text:    #e8e8f0;
+  --muted:   #6b6b80;
+  --accent:  #7c6af5;
+  --accent2: #a593ff;
+  --sell:    #f5a623;
+  --depo:    #4a9eff;
+  --de:      #22c55e;
+  --danger:  #ef4444;
+  --r:       10px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Sora', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+/* ── LOADING ── */
+#loading {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  height: 100vh; gap: 16px; color: var(--muted); font-size: 13px;
+}
+.spinner {
+  width: 32px; height: 32px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── HEADER ── */
+.header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 14px 24px;
+  display: flex; align-items: center; justify-content: space-between;
+  position: sticky; top: 0; z-index: 100;
+}
+.header-title { font-size: 15px; font-weight: 700; }
+.header-title span { color: var(--accent2); }
+.header-right { display: flex; align-items: center; gap: 18px; }
+.header-stats {
+  display: flex; gap: 14px;
+  font-size: 12px; font-family: 'JetBrains Mono', monospace; color: var(--muted);
+}
+.header-stats b { color: var(--text); }
+.sync-badge {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11px; color: var(--muted);
+}
+.sync-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--muted); transition: background 0.4s;
+}
+.sync-dot.live { background: var(--de); animation: glow 2s ease-in-out infinite; }
+@keyframes glow { 0%,100% { opacity:1; } 50% { opacity:.35; } }
+
+/* ── LAYOUT ── */
+#app { display: none; }
+.layout {
+  display: grid;
+  grid-template-columns: 236px 1fr 296px;
+  height: calc(100vh - 53px);
+}
+
+/* ── SIDEBAR ── */
+.sidebar {
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  overflow-y: auto; padding: 10px 0;
+}
+.floor-label {
+  font-size: 10px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: .12em; color: var(--muted); padding: 14px 16px 5px;
+}
+.floor-divider { height: 1px; background: var(--border); margin: 6px 0; }
+.room-btn {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%; padding: 9px 16px;
+  background: none; border: none; color: var(--muted);
+  font-family: 'Sora', sans-serif; font-size: 13px;
+  cursor: pointer; text-align: left; transition: all .15s; position: relative;
+}
+.room-btn:hover { background: var(--surface2); color: var(--text); }
+.room-btn.active { background: var(--surface2); color: var(--text); }
+.room-btn.active::before {
+  content: ''; position: absolute;
+  left: 0; top: 0; bottom: 0; width: 3px;
+  background: var(--accent); border-radius: 0 3px 3px 0;
+}
+.room-icon { font-size: 15px; width: 20px; text-align: center; }
+.room-count {
+  margin-left: auto;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 20px; font-size: 10px; font-family: 'JetBrains Mono', monospace;
+  padding: 1px 7px; color: var(--muted); min-width: 24px; text-align: center;
+}
+.room-btn.active .room-count { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+/* ── MAIN ── */
+.main { overflow-y: auto; padding: 24px; }
+.room-header { margin-bottom: 18px; }
+.room-header h2 { font-size: 21px; font-weight: 700; letter-spacing: -.02em; }
+.room-header p  { font-size: 13px; color: var(--muted); margin-top: 4px; }
+
+/* ── ADD FORM ── */
+.add-form {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 13px 16px; margin-bottom: 16px;
+  display: none; gap: 10px; align-items: center; flex-wrap: wrap;
+}
+.add-form.visible { display: flex; }
+.add-form input {
+  flex: 1; min-width: 180px;
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 7px; padding: 9px 14px;
+  color: var(--text); font-family: 'Sora', sans-serif; font-size: 13px;
+  outline: none; transition: border-color .15s;
+}
+.add-form input:focus { border-color: var(--accent); }
+.add-form input::placeholder { color: var(--muted); }
+
+.status-select { display: flex; gap: 6px; }
+.spill {
+  padding: 8px 12px; border-radius: 7px;
+  font-size: 12px; font-weight: 600; cursor: pointer;
+  border: 1.5px solid transparent; transition: all .15s;
+  font-family: 'Sora', sans-serif; opacity: .45;
+}
+.spill.sell    { background: rgba(245,166,35,.1); color: var(--sell);  border-color: rgba(245,166,35,.2); }
+.spill.depo    { background: rgba(74,158,255,.1); color: var(--depo);  border-color: rgba(74,158,255,.2); }
+.spill.almanya { background: rgba(34,197,94,.1);  color: var(--de);    border-color: rgba(34,197,94,.2);  }
+.spill.active  { opacity: 1; }
+.spill.sell.active    { border-color: var(--sell);  background: rgba(245,166,35,.18); }
+.spill.depo.active    { border-color: var(--depo);  background: rgba(74,158,255,.18); }
+.spill.almanya.active { border-color: var(--de);    background: rgba(34,197,94,.18);  }
+
+.btn-add {
+  background: var(--accent); color: #fff; border: none;
+  border-radius: 7px; padding: 9px 18px;
+  font-family: 'Sora', sans-serif; font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: background .15s; white-space: nowrap;
+}
+.btn-add:hover { background: var(--accent2); }
+
+/* ── ITEMS ── */
+.items-list { display: flex; flex-direction: column; gap: 6px; }
+.item-row {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 11px 14px;
+  display: flex; align-items: center; gap: 12px;
+  animation: fadeUp .18s ease;
+}
+@keyframes fadeUp { from { opacity:0; transform:translateY(-5px); } to { opacity:1; transform:none; } }
+.item-name { flex: 1; font-size: 13px; }
+.ibadge {
+  font-size: 11px; font-weight: 600;
+  padding: 3px 10px; border-radius: 20px; white-space: nowrap;
+}
+.ibadge.sell    { background: rgba(245,166,35,.15); color: var(--sell); }
+.ibadge.depo    { background: rgba(74,158,255,.15); color: var(--depo); }
+.ibadge.almanya { background: rgba(34,197,94,.15);  color: var(--de);   }
+
+.chg-sel {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 5px; color: var(--text);
+  font-family: 'Sora', sans-serif; font-size: 11px;
+  padding: 3px 6px; cursor: pointer; outline: none;
+}
+.btn-del {
+  width: 26px; height: 26px; border: 1px solid transparent;
+  border-radius: 5px; background: none; color: var(--muted);
+  font-size: 15px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all .15s;
+}
+.btn-del:hover { color: var(--danger); border-color: rgba(239,68,68,.3); background: rgba(239,68,68,.08); }
+
+.empty {
+  text-align: center; padding: 48px 24px;
+  color: var(--muted); font-size: 13px; line-height: 1.8;
+}
+.empty .ico { font-size: 32px; margin-bottom: 10px; }
+
+/* ── PANEL ── */
+.panel {
+  background: var(--surface); border-left: 1px solid var(--border);
+  overflow-y: auto; padding: 20px;
+  display: flex; flex-direction: column; gap: 20px;
+}
+.psec h3 {
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .12em; color: var(--muted); margin-bottom: 12px;
+}
+.scard {
+  border: 1px solid var(--border); border-radius: var(--r);
+  padding: 12px 14px; margin-bottom: 8px;
+  display: flex; align-items: center; gap: 12px;
+}
+.sdot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.sinfo { flex: 1; }
+.slabel { font-size: 12px; color: var(--muted); }
+.sval { font-size: 20px; font-weight: 700; font-family: 'JetBrains Mono', monospace; letter-spacing: -.03em; }
+.spct { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--muted); }
+.pbar { height: 4px; background: var(--border); border-radius: 4px; margin-top: 5px; overflow: hidden; }
+.pfill { height: 100%; border-radius: 4px; transition: width .4s ease; }
+
+.note-ta {
+  width: 100%; background: var(--bg); border: 1px solid var(--border);
+  border-radius: 7px; padding: 10px 12px;
+  color: var(--text); font-family: 'Sora', sans-serif; font-size: 12px;
+  outline: none; resize: vertical; min-height: 72px; transition: border-color .15s;
+}
+.note-ta:focus { border-color: var(--accent); }
+.note-ta::placeholder { color: var(--muted); }
+
+.btn-export {
+  width: 100%; background: var(--accent); color: #fff; border: none;
+  border-radius: var(--r); padding: 12px;
+  font-family: 'Sora', sans-serif; font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: background .15s;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.btn-export:hover { background: var(--accent2); }
+.btn-sec {
+  width: 100%; background: none; color: var(--muted);
+  border: 1px solid var(--border); border-radius: var(--r);
+  padding: 10px; font-family: 'Sora', sans-serif; font-size: 12px;
+  cursor: pointer; transition: all .15s; margin-top: 6px;
+}
+.btn-sec:hover { color: var(--danger); border-color: rgba(239,68,68,.3); }
+
+/* ── TOAST ── */
+.toast {
+  position: fixed; bottom: 24px; right: 24px;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 11px 18px;
+  font-size: 13px; z-index: 999;
+  opacity: 0; transform: translateY(10px); transition: all .2s;
+  pointer-events: none;
+}
+.toast.on { opacity: 1; transform: none; }
+</style>
+</head>
+<body>
+
+<!-- Loading screen -->
+<div id="loading">
+  <div class="spinner"></div>
+  <span>Firebase'e bağlanıyor...</span>
+</div>
+
+<!-- Main app (hidden until data arrives) -->
+<div id="app">
+
+  <header class="header">
+    <div class="header-title">🏠 Taşınma Envanteri <span>/ Gülüm Ailesi</span></div>
+    <div class="header-right">
+      <div class="header-stats">
+        <span>🟡 <b id="h-sell">0</b></span>
+        <span>🔵 <b id="h-depo">0</b></span>
+        <span>🟢 <b id="h-de">0</b></span>
+        <span>Toplam <b id="h-total">0</b></span>
+      </div>
+      <div class="sync-badge">
+        <div class="sync-dot live" id="sdot"></div>
+        <span id="slbl">Canlı</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="layout">
+    <nav class="sidebar" id="sidebar"></nav>
+
+    <main class="main">
+      <div class="room-header">
+        <h2 id="rtitle">Oda seçin</h2>
+        <p  id="rsub">Soldan bir oda seçerek eşya girişi yapabilirsiniz</p>
+      </div>
+
+      <div class="add-form" id="addform">
+        <input type="text" id="iteminput" placeholder="Eşya adını yazın..." maxlength="120" />
+        <div class="status-select">
+          <button class="spill sell"    data-s="sell"    onclick="pickStatus('sell')">🟡 Satılık</button>
+          <button class="spill depo"    data-s="depo"    onclick="pickStatus('depo')">🔵 Depo</button>
+          <button class="spill almanya" data-s="almanya" onclick="pickStatus('almanya')">🟢 Hamburg</button>
+        </div>
+        <button class="btn-add" onclick="addItem()">+ Ekle</button>
+      </div>
+
+      <div class="items-list" id="itemlist">
+        <div class="empty"><div class="ico">👈</div>Soldan bir oda seçin</div>
+      </div>
+    </main>
+
+    <aside class="panel">
+      <div class="psec">
+        <h3>Genel Durum</h3>
+        <div class="scard">
+          <div class="sdot" style="background:var(--sell)"></div>
+          <div class="sinfo"><div class="slabel">Satılık</div><div class="sval" id="ps">0</div></div>
+          <span class="spct" id="ps-p">0%</span>
+        </div>
+        <div class="pbar"><div class="pfill" id="pb-s" style="background:var(--sell);width:0%"></div></div>
+
+        <div class="scard" style="margin-top:8px">
+          <div class="sdot" style="background:var(--depo)"></div>
+          <div class="sinfo"><div class="slabel">Depo</div><div class="sval" id="pd">0</div></div>
+          <span class="spct" id="pd-p">0%</span>
+        </div>
+        <div class="pbar"><div class="pfill" id="pb-d" style="background:var(--depo);width:0%"></div></div>
+
+        <div class="scard" style="margin-top:8px">
+          <div class="sdot" style="background:var(--de)"></div>
+          <div class="sinfo"><div class="slabel">Hamburg'a Götür</div><div class="sval" id="pa">0</div></div>
+          <span class="spct" id="pa-p">0%</span>
+        </div>
+        <div class="pbar"><div class="pfill" id="pb-a" style="background:var(--de);width:0%"></div></div>
+      </div>
+
+      <div class="psec">
+        <h3>Not</h3>
+        <textarea class="note-ta" id="notetxt"
+          placeholder="Genel not... (depo adresi, taşıma tarihi vb.)"
+          oninput="queueNote()"></textarea>
+      </div>
+
+      <div class="psec">
+        <h3>Dışa Aktar</h3>
+        <button class="btn-export" onclick="exportXlsx()">📊 Excel'e Aktar (.xlsx)</button>
+        <button class="btn-sec"    onclick="clearAll()">🗑 Tüm verileri sıfırla</button>
+      </div>
+    </aside>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── STRUCTURE ───────────────────────────────────────────────────────────────
+const FLOORS = [
+  { id:'bahce', label:'Bahçe Katı', rooms:[
+    { id:'bahce-salon',  icon:'🛋', label:'Büyük Salon & Açık Mutfak' },
+    { id:'kis-bahce',    icon:'🌿', label:'Kış Bahçesi' },
+    { id:'hizmetli',     icon:'🛏', label:'Hizmetli Odası' },
+    { id:'ardiye',       icon:'📦', label:'Ardiye' },
+  ]},
+  { id:'orta', label:'Orta Kat', rooms:[
+    { id:'kiz-odasi',       icon:'👧', label:'Kız Çocuk Odası' },
+    { id:'erkek-odasi',     icon:'👦', label:'Erkek Çocuk Odası' },
+    { id:'ebeveyn-yatak',   icon:'🛏', label:'Ebeveyn Yatak Odası' },
+    { id:'ebeveyn-giyinme', icon:'👔', label:'Ebeveyn Giyinme Odası' },
+    { id:'orta-banyo',      icon:'🚿', label:'Tuvalet / Banyo' },
+    { id:'ebeveyn-banyo',   icon:'🛁', label:'Ebeveyn Tuvalet / Banyo' },
+  ]},
+  { id:'salon', label:'Salon Katı', rooms:[
+    { id:'ana-salon',     icon:'🛋', label:'Salon' },
+    { id:'ana-mutfak',    icon:'🍳', label:'Mutfak' },
+    { id:'misafir',       icon:'🛏', label:'Misafir Odası' },
+    { id:'salon-tuvalet', icon:'🚽', label:'Tuvalet' },
+  ]},
+];
+
+// ─── STATE ────────────────────────────────────────────────────────────────────
+let currentRoom    = null;
+let selSt          = 'depo';
+let noteTimer      = null;
+
+// ─── FIREBASE DATA ARRIVES ───────────────────────────────────────────────────
+window.addEventListener('fb-data', () => {
+  // First time: show app, hide loader
+  if (document.getElementById('loading').style.display !== 'none') {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('app').style.display     = 'block';
+    pickStatus('depo');
+    renderSidebar();
+  }
+
+  // Sync note textarea (only if not currently focused)
+  const noteEl = document.getElementById('notetxt');
+  if (document.activeElement !== noteEl) noteEl.value = window._note || '';
+
+  renderSidebar();
+  if (currentRoom) renderItems();
+  updateStats();
+});
+
+// ─── SIDEBAR ─────────────────────────────────────────────────────────────────
+function renderSidebar() {
+  const data = window._data || {};
+  const sb   = document.getElementById('sidebar');
+  sb.innerHTML = '';
+  FLOORS.forEach((floor, fi) => {
+    if (fi > 0) sb.innerHTML += '<div class="floor-divider"></div>';
+    sb.innerHTML += `<div class="floor-label">${floor.label}</div>`;
+    floor.rooms.forEach(room => {
+      const cnt    = Object.keys(data[room.id] || {}).length;
+      const active = currentRoom === room.id ? ' active' : '';
+      sb.innerHTML += `
+        <button class="room-btn${active}" onclick="selectRoom('${room.id}')">
+          <span class="room-icon">${room.icon}</span>
+          <span>${room.label}</span>
+          <span class="room-count">${cnt}</span>
+        </button>`;
+    });
+  });
+}
+
+// ─── SELECT ROOM ─────────────────────────────────────────────────────────────
+function selectRoom(id) {
+  currentRoom = id;
+  const room  = FLOORS.flatMap(f => f.rooms).find(r => r.id === id);
+  const floor = FLOORS.find(f => f.rooms.some(r => r.id === id));
+  document.getElementById('rtitle').textContent = `${room.icon} ${room.label}`;
+  document.getElementById('rsub').textContent   = `${floor.label} — eşyaları listeleyin ve durumlarını belirtin`;
+  document.getElementById('addform').classList.add('visible');
+  document.getElementById('iteminput').value = '';
+  renderSidebar();
+  renderItems();
+}
+
+// ─── STATUS PICK ─────────────────────────────────────────────────────────────
+function pickStatus(s) {
+  selSt = s;
+  document.querySelectorAll('.spill').forEach(el =>
+    el.classList.toggle('active', el.dataset.s === s));
+}
+
+// ─── ADD ITEM ─────────────────────────────────────────────────────────────────
+async function addItem() {
+  const inp  = document.getElementById('iteminput');
+  const name = inp.value.trim();
+  if (!name || !currentRoom) return;
+
+  setSyncing(true);
+  try {
+    await window._fbPush(`envanter/items/${currentRoom}`, { name, status: selSt });
+  } catch (e) {
+    toast('❌ Kaydedilemedi: ' + e.message);
+    setSyncing(false);
+    return;
+  }
+  setSyncing(false);
+  inp.value = '';
+  inp.focus();
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && document.activeElement?.id === 'iteminput') addItem();
+});
+
+// ─── RENDER ITEMS ─────────────────────────────────────────────────────────────
+function renderItems() {
+  const data  = window._data || {};
+  const items = data[currentRoom] || {};
+  const keys  = Object.keys(items);
+  const list  = document.getElementById('itemlist');
+
+  if (!keys.length) {
+    list.innerHTML = `<div class="empty"><div class="ico">📭</div>Bu odada henüz eşya yok.<br>Yukarıdan ekleyin.</div>`;
+    return;
+  }
+
+  list.innerHTML = keys.map(k => {
+    const it = items[k];
+    const lbl = { sell:'🟡 Satılık', depo:'🔵 Depo', almanya:'🟢 Hamburg' }[it.status] || it.status;
+    return `
+      <div class="item-row">
+        <span class="item-name">${esc(it.name)}</span>
+        <span class="ibadge ${it.status}">${lbl}</span>
+        <select class="chg-sel" onchange="changeStatus('${k}', this.value)">
+          <option value="sell"    ${it.status==='sell'   ?'selected':''}>🟡 Satılık</option>
+          <option value="depo"    ${it.status==='depo'   ?'selected':''}>🔵 Depo</option>
+          <option value="almanya" ${it.status==='almanya'?'selected':''}>🟢 Hamburg</option>
+        </select>
+        <button class="btn-del" onclick="delItem('${k}')">×</button>
+      </div>`;
+  }).join('');
+}
+
+// ─── CHANGE STATUS ────────────────────────────────────────────────────────────
+async function changeStatus(key, newSt) {
+  setSyncing(true);
+  await window._fbSet(`envanter/items/${currentRoom}/${key}/status`, newSt);
+  setSyncing(false);
+}
+
+// ─── DELETE ───────────────────────────────────────────────────────────────────
+async function delItem(key) {
+  if (!confirm('Bu eşyayı silmek istiyor musunuz?')) return;
+  setSyncing(true);
+  await window._fbRemove(`envanter/items/${currentRoom}/${key}`);
+  setSyncing(false);
+}
+
+// ─── STATS ────────────────────────────────────────────────────────────────────
+function updateStats() {
+  const data  = window._data || {};
+  const all   = Object.values(data).flatMap(r => Object.values(r));
+  const sell  = all.filter(i => i.status === 'sell').length;
+  const depo  = all.filter(i => i.status === 'depo').length;
+  const de    = all.filter(i => i.status === 'almanya').length;
+  const total = all.length;
+
+  ['h-sell','ps'].forEach(id => document.getElementById(id).textContent = sell);
+  ['h-depo','pd'].forEach(id => document.getElementById(id).textContent = depo);
+  ['h-de',  'pa'].forEach(id => document.getElementById(id).textContent = de);
+  document.getElementById('h-total').textContent = total;
+
+  const pct = v => total ? Math.round(v / total * 100) : 0;
+  document.getElementById('ps-p').textContent  = pct(sell) + '%';
+  document.getElementById('pd-p').textContent  = pct(depo) + '%';
+  document.getElementById('pa-p').textContent  = pct(de)   + '%';
+  document.getElementById('pb-s').style.width  = pct(sell) + '%';
+  document.getElementById('pb-d').style.width  = pct(depo) + '%';
+  document.getElementById('pb-a').style.width  = pct(de)   + '%';
+}
+
+// ─── NOTE ─────────────────────────────────────────────────────────────────────
+function queueNote() {
+  clearTimeout(noteTimer);
+  noteTimer = setTimeout(async () => {
+    await window._fbSet('envanter/note', document.getElementById('notetxt').value);
+  }, 900);
+}
+
+// ─── CLEAR ALL ───────────────────────────────────────────────────────────────
+async function clearAll() {
+  if (!confirm('TÜM eşya verileri silinecek. Emin misiniz?')) return;
+  setSyncing(true);
+  await window._fbSet('envanter/items', {});
+  setSyncing(false);
+  toast('🗑 Tüm veriler silindi');
+}
+
+// ─── EXCEL EXPORT ─────────────────────────────────────────────────────────────
+function exportXlsx() {
+  const data = window._data || {};
+  const wb   = XLSX.utils.book_new();
+  const smap = { sell:'Satılık', depo:'Depoda Kalacak', almanya:"Hamburg'a Götür" };
+
+  // Sheet 1 – hepsi
+  const rows = [['Kat','Oda','Eşya','Durum']];
+  FLOORS.forEach(fl => fl.rooms.forEach(room => {
+    Object.values(data[room.id] || {}).forEach(it =>
+      rows.push([fl.label, room.label, it.name, smap[it.status] || it.status])
+    );
+  }));
+  const ws1 = XLSX.utils.aoa_to_sheet(rows);
+  ws1['!cols'] = [{wch:16},{wch:26},{wch:32},{wch:22}];
+  XLSX.utils.book_append_sheet(wb, ws1, 'Tüm Eşyalar');
+
+  // Sheets by status
+  [['sell','🟡 Satılık'],['depo','🔵 Depoda'],['almanya','🟢 Hamburg']].forEach(([st,lbl]) => {
+    const r = [['Kat','Oda','Eşya']];
+    FLOORS.forEach(fl => fl.rooms.forEach(room => {
+      Object.values(data[room.id] || {}).filter(i => i.status === st)
+        .forEach(it => r.push([fl.label, room.label, it.name]));
+    }));
+    const ws = XLSX.utils.aoa_to_sheet(r);
+    ws['!cols'] = [{wch:16},{wch:26},{wch:32}];
+    XLSX.utils.book_append_sheet(wb, ws, lbl);
+  });
+
+  // Özet
+  const all  = Object.values(data).flatMap(r => Object.values(r));
+  const wsZ  = XLSX.utils.aoa_to_sheet([
+    ['Özet',''],
+    ['Toplam Eşya',             all.length],
+    ['Satılık',                 all.filter(i=>i.status==='sell').length],
+    ['Depoda Kalacak',          all.filter(i=>i.status==='depo').length],
+    ["Hamburg'a Götürülecek",   all.filter(i=>i.status==='almanya').length],
+    ['',''],
+    ['Not', window._note || ''],
+    ['Oluşturulma', new Date().toLocaleString('tr-TR')],
+  ]);
+  wsZ['!cols'] = [{wch:28},{wch:22}];
+  XLSX.utils.book_append_sheet(wb, wsZ, '📊 Özet');
+
+  XLSX.writeFile(wb, `Tasinma_Envanteri_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+let syncTimer;
+function setSyncing(on) {
+  const dot = document.getElementById('sdot');
+  const lbl = document.getElementById('slbl');
+  clearTimeout(syncTimer);
+  if (on) {
+    dot.classList.remove('live');
+    dot.style.background = 'var(--sell)';
+    lbl.textContent = 'Kaydediliyor...';
+  } else {
+    syncTimer = setTimeout(() => {
+      dot.style.background = '';
+      dot.classList.add('live');
+      lbl.textContent = 'Canlı';
+    }, 600);
+  }
+}
+
+let toastTimer;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('on');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('on'), 2500);
+}
+</script>
+</body>
+</html>
