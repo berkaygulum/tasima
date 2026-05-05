@@ -23,7 +23,6 @@
   const app = initializeApp(firebaseConfig);
   const db  = getDatabase(app);
 
-  // ── Realtime listeners ──────────────────────────────────────────────────
   onValue(ref(db, 'envanter'), (snapshot) => {
     const d = snapshot.val() || {};
     window._data      = d.items || {};
@@ -32,7 +31,6 @@
     window.dispatchEvent(new Event('fb-data'));
   });
 
-  // ── Write helpers (exposed to global) ──────────────────────────────────
   window._fbPush = (path, val) =>
     push(ref(db, path), val).then(r => r.key);
 
@@ -63,13 +61,13 @@
   --sell:    #f5a623;
   --depo:    #4a9eff;
   --de:      #22c55e;
+  --at:      #ef4444;
   --danger:  #ef4444;
   --r:       10px;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: 'Sora', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
 
-/* ── LOADING ── */
 #loading {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   height: 100vh; gap: 16px; color: var(--muted); font-size: 13px;
@@ -83,7 +81,6 @@ body { font-family: 'Sora', sans-serif; background: var(--bg); color: var(--text
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* ── HEADER ── */
 .header {
   background: var(--surface);
   border-bottom: 1px solid var(--border);
@@ -99,35 +96,16 @@ body { font-family: 'Sora', sans-serif; background: var(--bg); color: var(--text
   font-size: 12px; font-family: 'JetBrains Mono', monospace; color: var(--muted);
 }
 .header-stats b { color: var(--text); }
-.sync-badge {
-  display: flex; align-items: center; gap: 6px;
-  font-size: 11px; color: var(--muted);
-}
-.sync-dot {
-  width: 7px; height: 7px; border-radius: 50%;
-  background: var(--muted); transition: background 0.4s;
-}
+.sync-badge { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); }
+.sync-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); transition: background 0.4s; }
 .sync-dot.live { background: var(--de); animation: glow 2s ease-in-out infinite; }
 @keyframes glow { 0%,100% { opacity:1; } 50% { opacity:.35; } }
 
-/* ── LAYOUT ── */
 #app { display: none; }
-.layout {
-  display: grid;
-  grid-template-columns: 236px 1fr 296px;
-  height: calc(100vh - 53px);
-}
+.layout { display: grid; grid-template-columns: 236px 1fr 296px; height: calc(100vh - 53px); }
 
-/* ── SIDEBAR ── */
-.sidebar {
-  background: var(--surface);
-  border-right: 1px solid var(--border);
-  overflow-y: auto; padding: 10px 0;
-}
-.floor-label {
-  font-size: 10px; font-weight: 600; text-transform: uppercase;
-  letter-spacing: .12em; color: var(--muted); padding: 14px 16px 5px;
-}
+.sidebar { background: var(--surface); border-right: 1px solid var(--border); overflow-y: auto; padding: 10px 0; }
+.floor-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); padding: 14px 16px 5px; }
 .floor-divider { height: 1px; background: var(--border); margin: 6px 0; }
 .room-btn {
   display: flex; align-items: center; gap: 10px;
@@ -139,26 +117,22 @@ body { font-family: 'Sora', sans-serif; background: var(--bg); color: var(--text
 .room-btn:hover { background: var(--surface2); color: var(--text); }
 .room-btn.active { background: var(--surface2); color: var(--text); }
 .room-btn.active::before {
-  content: ''; position: absolute;
-  left: 0; top: 0; bottom: 0; width: 3px;
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
   background: var(--accent); border-radius: 0 3px 3px 0;
 }
 .room-icon { font-size: 15px; width: 20px; text-align: center; }
 .room-count {
-  margin-left: auto;
-  background: var(--surface); border: 1px solid var(--border);
+  margin-left: auto; background: var(--surface); border: 1px solid var(--border);
   border-radius: 20px; font-size: 10px; font-family: 'JetBrains Mono', monospace;
   padding: 1px 7px; color: var(--muted); min-width: 24px; text-align: center;
 }
 .room-btn.active .room-count { background: var(--accent); border-color: var(--accent); color: #fff; }
 
-/* ── MAIN ── */
 .main { overflow-y: auto; padding: 24px; }
 .room-header { margin-bottom: 18px; }
 .room-header h2 { font-size: 21px; font-weight: 700; letter-spacing: -.02em; }
 .room-header p  { font-size: 13px; color: var(--muted); margin-top: 4px; }
 
-/* ── ADD FORM ── */
 .add-form {
   background: var(--surface); border: 1px solid var(--border);
   border-radius: var(--r); padding: 13px 16px; margin-bottom: 16px;
@@ -166,92 +140,74 @@ body { font-family: 'Sora', sans-serif; background: var(--bg); color: var(--text
 }
 .add-form.visible { display: flex; }
 .add-form input {
-  flex: 1; min-width: 180px;
-  background: var(--bg); border: 1px solid var(--border);
-  border-radius: 7px; padding: 9px 14px;
-  color: var(--text); font-family: 'Sora', sans-serif; font-size: 13px;
-  outline: none; transition: border-color .15s;
+  flex: 1; min-width: 180px; background: var(--bg); border: 1px solid var(--border);
+  border-radius: 7px; padding: 9px 14px; color: var(--text);
+  font-family: 'Sora', sans-serif; font-size: 13px; outline: none; transition: border-color .15s;
 }
 .add-form input:focus { border-color: var(--accent); }
 .add-form input::placeholder { color: var(--muted); }
 
 .status-select { display: flex; gap: 6px; }
 .spill {
-  padding: 8px 12px; border-radius: 7px;
-  font-size: 12px; font-weight: 600; cursor: pointer;
-  border: 1.5px solid transparent; transition: all .15s;
+  padding: 8px 12px; border-radius: 7px; font-size: 12px; font-weight: 600;
+  cursor: pointer; border: 1.5px solid transparent; transition: all .15s;
   font-family: 'Sora', sans-serif; opacity: .45;
 }
 .spill.sell    { background: rgba(245,166,35,.1); color: var(--sell);  border-color: rgba(245,166,35,.2); }
 .spill.depo    { background: rgba(74,158,255,.1); color: var(--depo);  border-color: rgba(74,158,255,.2); }
 .spill.almanya { background: rgba(34,197,94,.1);  color: var(--de);    border-color: rgba(34,197,94,.2);  }
+.spill.at      { background: rgba(239,68,68,.1);  color: var(--at);    border-color: rgba(239,68,68,.2);  }
 .spill.active  { opacity: 1; }
 .spill.sell.active    { border-color: var(--sell);  background: rgba(245,166,35,.18); }
 .spill.depo.active    { border-color: var(--depo);  background: rgba(74,158,255,.18); }
 .spill.almanya.active { border-color: var(--de);    background: rgba(34,197,94,.18);  }
+.spill.at.active      { border-color: var(--at);    background: rgba(239,68,68,.18);  }
 
 .btn-add {
-  background: var(--accent); color: #fff; border: none;
-  border-radius: 7px; padding: 9px 18px;
+  background: var(--accent); color: #fff; border: none; border-radius: 7px; padding: 9px 18px;
   font-family: 'Sora', sans-serif; font-size: 13px; font-weight: 600;
   cursor: pointer; transition: background .15s; white-space: nowrap;
 }
 .btn-add:hover { background: var(--accent2); }
 
-/* ── ITEMS ── */
 .items-list { display: flex; flex-direction: column; gap: 6px; }
 .item-row {
   background: var(--surface); border: 1px solid var(--border);
   border-radius: var(--r); padding: 11px 14px;
-  display: flex; align-items: center; gap: 12px;
-  animation: fadeUp .18s ease;
+  display: flex; align-items: center; gap: 12px; animation: fadeUp .18s ease;
 }
 @keyframes fadeUp { from { opacity:0; transform:translateY(-5px); } to { opacity:1; transform:none; } }
 .item-name { flex: 1; font-size: 13px; }
-.ibadge {
-  font-size: 11px; font-weight: 600;
-  padding: 3px 10px; border-radius: 20px; white-space: nowrap;
-}
+.ibadge { font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px; white-space: nowrap; }
 .ibadge.sell    { background: rgba(245,166,35,.15); color: var(--sell); }
 .ibadge.depo    { background: rgba(74,158,255,.15); color: var(--depo); }
 .ibadge.almanya { background: rgba(34,197,94,.15);  color: var(--de);   }
+.ibadge.at      { background: rgba(239,68,68,.15);  color: var(--at);   }
 
 .chg-sel {
-  background: var(--surface2); border: 1px solid var(--border);
-  border-radius: 5px; color: var(--text);
-  font-family: 'Sora', sans-serif; font-size: 11px;
+  background: var(--surface2); border: 1px solid var(--border); border-radius: 5px;
+  color: var(--text); font-family: 'Sora', sans-serif; font-size: 11px;
   padding: 3px 6px; cursor: pointer; outline: none;
 }
 .btn-del {
-  width: 26px; height: 26px; border: 1px solid transparent;
-  border-radius: 5px; background: none; color: var(--muted);
-  font-size: 15px; cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  transition: all .15s;
+  width: 26px; height: 26px; border: 1px solid transparent; border-radius: 5px;
+  background: none; color: var(--muted); font-size: 15px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; transition: all .15s;
 }
 .btn-del:hover { color: var(--danger); border-color: rgba(239,68,68,.3); background: rgba(239,68,68,.08); }
 
-.empty {
-  text-align: center; padding: 48px 24px;
-  color: var(--muted); font-size: 13px; line-height: 1.8;
-}
+.empty { text-align: center; padding: 48px 24px; color: var(--muted); font-size: 13px; line-height: 1.8; }
 .empty .ico { font-size: 32px; margin-bottom: 10px; }
 
-/* ── PANEL ── */
 .panel {
   background: var(--surface); border-left: 1px solid var(--border);
-  overflow-y: auto; padding: 20px;
-  display: flex; flex-direction: column; gap: 20px;
+  overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 20px;
 }
 .psec h3 {
   font-size: 10px; font-weight: 700; text-transform: uppercase;
   letter-spacing: .12em; color: var(--muted); margin-bottom: 12px;
 }
-.scard {
-  border: 1px solid var(--border); border-radius: var(--r);
-  padding: 12px 14px; margin-bottom: 8px;
-  display: flex; align-items: center; gap: 12px;
-}
+.scard { border: 1px solid var(--border); border-radius: var(--r); padding: 12px 14px; margin-bottom: 8px; display: flex; align-items: center; gap: 12px; }
 .sdot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
 .sinfo { flex: 1; }
 .slabel { font-size: 12px; color: var(--muted); }
@@ -261,53 +217,43 @@ body { font-family: 'Sora', sans-serif; background: var(--bg); color: var(--text
 .pfill { height: 100%; border-radius: 4px; transition: width .4s ease; }
 
 .note-ta {
-  width: 100%; background: var(--bg); border: 1px solid var(--border);
-  border-radius: 7px; padding: 10px 12px;
-  color: var(--text); font-family: 'Sora', sans-serif; font-size: 12px;
+  width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 7px;
+  padding: 10px 12px; color: var(--text); font-family: 'Sora', sans-serif; font-size: 12px;
   outline: none; resize: vertical; min-height: 72px; transition: border-color .15s;
 }
 .note-ta:focus { border-color: var(--accent); }
 .note-ta::placeholder { color: var(--muted); }
 
 .btn-export {
-  width: 100%; background: var(--accent); color: #fff; border: none;
-  border-radius: var(--r); padding: 12px;
-  font-family: 'Sora', sans-serif; font-size: 13px; font-weight: 600;
-  cursor: pointer; transition: background .15s;
-  display: flex; align-items: center; justify-content: center; gap: 8px;
+  width: 100%; background: var(--accent); color: #fff; border: none; border-radius: var(--r); padding: 12px;
+  font-family: 'Sora', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer;
+  transition: background .15s; display: flex; align-items: center; justify-content: center; gap: 8px;
 }
 .btn-export:hover { background: var(--accent2); }
 .btn-sec {
-  width: 100%; background: none; color: var(--muted);
-  border: 1px solid var(--border); border-radius: var(--r);
-  padding: 10px; font-family: 'Sora', sans-serif; font-size: 12px;
+  width: 100%; background: none; color: var(--muted); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 10px; font-family: 'Sora', sans-serif; font-size: 12px;
   cursor: pointer; transition: all .15s; margin-top: 6px;
 }
 .btn-sec:hover { color: var(--danger); border-color: rgba(239,68,68,.3); }
 
-/* ── TOAST ── */
 .toast {
-  position: fixed; bottom: 24px; right: 24px;
-  background: var(--surface2); border: 1px solid var(--border);
-  border-radius: var(--r); padding: 11px 18px;
-  font-size: 13px; z-index: 999;
-  opacity: 0; transform: translateY(10px); transition: all .2s;
-  pointer-events: none;
+  position: fixed; bottom: 24px; right: 24px; background: var(--surface2);
+  border: 1px solid var(--border); border-radius: var(--r); padding: 11px 18px;
+  font-size: 13px; z-index: 999; opacity: 0; transform: translateY(10px);
+  transition: all .2s; pointer-events: none;
 }
 .toast.on { opacity: 1; transform: none; }
 </style>
 </head>
 <body>
 
-<!-- Loading screen -->
 <div id="loading">
   <div class="spinner"></div>
   <span>Firebase'e bağlanıyor...</span>
 </div>
 
-<!-- Main app (hidden until data arrives) -->
 <div id="app">
-
   <header class="header">
     <div class="header-title">🏠 Taşınma Envanteri <span>/ Gülüm Ailesi</span></div>
     <div class="header-right">
@@ -315,6 +261,7 @@ body { font-family: 'Sora', sans-serif; background: var(--bg); color: var(--text
         <span>🟡 <b id="h-sell">0</b></span>
         <span>🔵 <b id="h-depo">0</b></span>
         <span>🟢 <b id="h-de">0</b></span>
+        <span>🔴 <b id="h-at">0</b></span>
         <span>Toplam <b id="h-total">0</b></span>
       </div>
       <div class="sync-badge">
@@ -339,6 +286,7 @@ body { font-family: 'Sora', sans-serif; background: var(--bg); color: var(--text
           <button class="spill sell"    data-s="sell"    onclick="pickStatus('sell')">🟡 Satılık</button>
           <button class="spill depo"    data-s="depo"    onclick="pickStatus('depo')">🔵 Depo</button>
           <button class="spill almanya" data-s="almanya" onclick="pickStatus('almanya')">🟢 Hamburg</button>
+          <button class="spill at"      data-s="at"      onclick="pickStatus('at')">🔴 At</button>
         </div>
         <button class="btn-add" onclick="addItem()">+ Ekle</button>
       </div>
@@ -371,6 +319,13 @@ body { font-family: 'Sora', sans-serif; background: var(--bg); color: var(--text
           <span class="spct" id="pa-p">0%</span>
         </div>
         <div class="pbar"><div class="pfill" id="pb-a" style="background:var(--de);width:0%"></div></div>
+
+        <div class="scard" style="margin-top:8px">
+          <div class="sdot" style="background:var(--at)"></div>
+          <div class="sinfo"><div class="slabel">At</div><div class="sval" id="pat">0</div></div>
+          <span class="spct" id="pat-p">0%</span>
+        </div>
+        <div class="pbar"><div class="pfill" id="pb-at" style="background:var(--at);width:0%"></div></div>
       </div>
 
       <div class="psec">
@@ -387,13 +342,11 @@ body { font-family: 'Sora', sans-serif; background: var(--bg); color: var(--text
       </div>
     </aside>
   </div>
-
 </div>
 
 <div class="toast" id="toast"></div>
 
 <script>
-// ─── STRUCTURE ───────────────────────────────────────────────────────────────
 const FLOORS = [
   { id:'bahce', label:'Bahçe Katı', rooms:[
     { id:'bahce-salon',  icon:'🛋', label:'Büyük Salon & Açık Mutfak' },
@@ -417,31 +370,23 @@ const FLOORS = [
   ]},
 ];
 
-// ─── STATE ────────────────────────────────────────────────────────────────────
-let currentRoom    = null;
-let selSt          = 'depo';
-let noteTimer      = null;
+let currentRoom = null;
+let selSt       = 'depo';
+let noteTimer   = null;
 
-// ─── FIREBASE DATA ARRIVES ───────────────────────────────────────────────────
 window.addEventListener('fb-data', () => {
-  // First time: show app, hide loader
   if (document.getElementById('loading').style.display !== 'none') {
     document.getElementById('loading').style.display = 'none';
     document.getElementById('app').style.display     = 'block';
     pickStatus('depo');
-    renderSidebar();
   }
-
-  // Sync note textarea (only if not currently focused)
   const noteEl = document.getElementById('notetxt');
   if (document.activeElement !== noteEl) noteEl.value = window._note || '';
-
   renderSidebar();
   if (currentRoom) renderItems();
   updateStats();
 });
 
-// ─── SIDEBAR ─────────────────────────────────────────────────────────────────
 function renderSidebar() {
   const data = window._data || {};
   const sb   = document.getElementById('sidebar');
@@ -462,7 +407,6 @@ function renderSidebar() {
   });
 }
 
-// ─── SELECT ROOM ─────────────────────────────────────────────────────────────
 function selectRoom(id) {
   currentRoom = id;
   const room  = FLOORS.flatMap(f => f.rooms).find(r => r.id === id);
@@ -475,19 +419,16 @@ function selectRoom(id) {
   renderItems();
 }
 
-// ─── STATUS PICK ─────────────────────────────────────────────────────────────
 function pickStatus(s) {
   selSt = s;
   document.querySelectorAll('.spill').forEach(el =>
     el.classList.toggle('active', el.dataset.s === s));
 }
 
-// ─── ADD ITEM ─────────────────────────────────────────────────────────────────
 async function addItem() {
   const inp  = document.getElementById('iteminput');
   const name = inp.value.trim();
   if (!name || !currentRoom) return;
-
   setSyncing(true);
   try {
     await window._fbPush(`envanter/items/${currentRoom}`, { name, status: selSt });
@@ -505,21 +446,18 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Enter' && document.activeElement?.id === 'iteminput') addItem();
 });
 
-// ─── RENDER ITEMS ─────────────────────────────────────────────────────────────
 function renderItems() {
   const data  = window._data || {};
   const items = data[currentRoom] || {};
   const keys  = Object.keys(items);
   const list  = document.getElementById('itemlist');
-
   if (!keys.length) {
     list.innerHTML = `<div class="empty"><div class="ico">📭</div>Bu odada henüz eşya yok.<br>Yukarıdan ekleyin.</div>`;
     return;
   }
-
   list.innerHTML = keys.map(k => {
-    const it = items[k];
-    const lbl = { sell:'🟡 Satılık', depo:'🔵 Depo', almanya:'🟢 Hamburg' }[it.status] || it.status;
+    const it  = items[k];
+    const lbl = { sell:'🟡 Satılık', depo:'🔵 Depo', almanya:'🟢 Hamburg', at:'🔴 At' }[it.status] || it.status;
     return `
       <div class="item-row">
         <span class="item-name">${esc(it.name)}</span>
@@ -528,20 +466,19 @@ function renderItems() {
           <option value="sell"    ${it.status==='sell'   ?'selected':''}>🟡 Satılık</option>
           <option value="depo"    ${it.status==='depo'   ?'selected':''}>🔵 Depo</option>
           <option value="almanya" ${it.status==='almanya'?'selected':''}>🟢 Hamburg</option>
+          <option value="at"      ${it.status==='at'     ?'selected':''}>🔴 At</option>
         </select>
         <button class="btn-del" onclick="delItem('${k}')">×</button>
       </div>`;
   }).join('');
 }
 
-// ─── CHANGE STATUS ────────────────────────────────────────────────────────────
 async function changeStatus(key, newSt) {
   setSyncing(true);
   await window._fbSet(`envanter/items/${currentRoom}/${key}/status`, newSt);
   setSyncing(false);
 }
 
-// ─── DELETE ───────────────────────────────────────────────────────────────────
 async function delItem(key) {
   if (!confirm('Bu eşyayı silmek istiyor musunuz?')) return;
   setSyncing(true);
@@ -549,30 +486,32 @@ async function delItem(key) {
   setSyncing(false);
 }
 
-// ─── STATS ────────────────────────────────────────────────────────────────────
 function updateStats() {
   const data  = window._data || {};
   const all   = Object.values(data).flatMap(r => Object.values(r));
   const sell  = all.filter(i => i.status === 'sell').length;
   const depo  = all.filter(i => i.status === 'depo').length;
   const de    = all.filter(i => i.status === 'almanya').length;
+  const at    = all.filter(i => i.status === 'at').length;
   const total = all.length;
 
   ['h-sell','ps'].forEach(id => document.getElementById(id).textContent = sell);
   ['h-depo','pd'].forEach(id => document.getElementById(id).textContent = depo);
   ['h-de',  'pa'].forEach(id => document.getElementById(id).textContent = de);
+  ['h-at', 'pat'].forEach(id => document.getElementById(id).textContent = at);
   document.getElementById('h-total').textContent = total;
 
   const pct = v => total ? Math.round(v / total * 100) : 0;
   document.getElementById('ps-p').textContent  = pct(sell) + '%';
   document.getElementById('pd-p').textContent  = pct(depo) + '%';
   document.getElementById('pa-p').textContent  = pct(de)   + '%';
+  document.getElementById('pat-p').textContent = pct(at)   + '%';
   document.getElementById('pb-s').style.width  = pct(sell) + '%';
   document.getElementById('pb-d').style.width  = pct(depo) + '%';
   document.getElementById('pb-a').style.width  = pct(de)   + '%';
+  document.getElementById('pb-at').style.width = pct(at)   + '%';
 }
 
-// ─── NOTE ─────────────────────────────────────────────────────────────────────
 function queueNote() {
   clearTimeout(noteTimer);
   noteTimer = setTimeout(async () => {
@@ -580,7 +519,6 @@ function queueNote() {
   }, 900);
 }
 
-// ─── CLEAR ALL ───────────────────────────────────────────────────────────────
 async function clearAll() {
   if (!confirm('TÜM eşya verileri silinecek. Emin misiniz?')) return;
   setSyncing(true);
@@ -589,13 +527,11 @@ async function clearAll() {
   toast('🗑 Tüm veriler silindi');
 }
 
-// ─── EXCEL EXPORT ─────────────────────────────────────────────────────────────
 function exportXlsx() {
   const data = window._data || {};
   const wb   = XLSX.utils.book_new();
-  const smap = { sell:'Satılık', depo:'Depoda Kalacak', almanya:"Hamburg'a Götür" };
+  const smap = { sell:'Satılık', depo:'Depoda Kalacak', almanya:"Hamburg'a Götür", at:'At' };
 
-  // Sheet 1 – hepsi
   const rows = [['Kat','Oda','Eşya','Durum']];
   FLOORS.forEach(fl => fl.rooms.forEach(room => {
     Object.values(data[room.id] || {}).forEach(it =>
@@ -606,8 +542,7 @@ function exportXlsx() {
   ws1['!cols'] = [{wch:16},{wch:26},{wch:32},{wch:22}];
   XLSX.utils.book_append_sheet(wb, ws1, 'Tüm Eşyalar');
 
-  // Sheets by status
-  [['sell','🟡 Satılık'],['depo','🔵 Depoda'],['almanya','🟢 Hamburg']].forEach(([st,lbl]) => {
+  [['sell','🟡 Satılık'],['depo','🔵 Depoda'],['almanya','🟢 Hamburg'],['at','🔴 At']].forEach(([st,lbl]) => {
     const r = [['Kat','Oda','Eşya']];
     FLOORS.forEach(fl => fl.rooms.forEach(room => {
       Object.values(data[room.id] || {}).filter(i => i.status === st)
@@ -618,14 +553,14 @@ function exportXlsx() {
     XLSX.utils.book_append_sheet(wb, ws, lbl);
   });
 
-  // Özet
-  const all  = Object.values(data).flatMap(r => Object.values(r));
-  const wsZ  = XLSX.utils.aoa_to_sheet([
+  const all = Object.values(data).flatMap(r => Object.values(r));
+  const wsZ = XLSX.utils.aoa_to_sheet([
     ['Özet',''],
     ['Toplam Eşya',             all.length],
     ['Satılık',                 all.filter(i=>i.status==='sell').length],
     ['Depoda Kalacak',          all.filter(i=>i.status==='depo').length],
     ["Hamburg'a Götürülecek",   all.filter(i=>i.status==='almanya').length],
+    ['At',                      all.filter(i=>i.status==='at').length],
     ['',''],
     ['Not', window._note || ''],
     ['Oluşturulma', new Date().toLocaleString('tr-TR')],
@@ -636,7 +571,6 @@ function exportXlsx() {
   XLSX.writeFile(wb, `Tasinma_Envanteri_${new Date().toISOString().slice(0,10)}.xlsx`);
 }
 
-// ─── HELPERS ─────────────────────────────────────────────────────────────────
 function esc(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
